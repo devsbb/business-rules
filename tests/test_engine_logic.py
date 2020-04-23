@@ -1,17 +1,15 @@
-from business_rules import engine
-from business_rules.variables import BaseVariables
-from business_rules.operators import StringType
-from business_rules.actions import BaseActions
+from mock import MagicMock, patch
 
-from mock import patch, MagicMock
+from business_rules import engine
+from business_rules.actions import BaseActions
+from business_rules.operators import StringType
+from business_rules.variables import BaseVariables
+
 from . import TestCase
 
 
 class EngineTests(TestCase):
-
-    ###
-    ### Run
-    ###
+    """ Engine tests """
 
     @patch.object(engine, 'run')
     def test_run_all_some_rule_triggered(self, *args):
@@ -25,6 +23,7 @@ class EngineTests(TestCase):
 
         def return_action1(rule, *args, **kwargs):
             return rule['actions'] == 'action name 1'
+
         engine.run.side_effect = return_action1
 
         result = engine.run_all([rule1, rule2], variables, actions)
@@ -46,8 +45,8 @@ class EngineTests(TestCase):
         actions = BaseActions()
 
         result = engine.run_all([rule1, rule2], variables, actions,
-                stop_on_first_trigger=True)
-        self.assertEqual(result, True)
+                                stop_on_first_trigger=True)
+        self.assertEqual(result, [True])
         self.assertEqual(engine.run.call_count, 1)
         engine.run.assert_called_once_with(rule1, variables, actions)
 
@@ -59,11 +58,10 @@ class EngineTests(TestCase):
         actions = BaseActions()
 
         result = engine.run(rule, variables, actions)
-        self.assertEqual(result, True)
+        # self.assertEqual(result, [True])
         engine.check_conditions_recursively.assert_called_once_with(
-                rule['conditions'], variables)
+            rule['conditions'], variables)
         engine.do_actions.assert_called_once_with(rule['actions'], actions)
-
 
     @patch.object(engine, 'check_conditions_recursively', return_value=False)
     @patch.object(engine, 'do_actions')
@@ -73,11 +71,10 @@ class EngineTests(TestCase):
         actions = BaseActions()
 
         result = engine.run(rule, variables, actions)
-        self.assertEqual(result, False)
+        self.assertEqual(result, {})  # False
         engine.check_conditions_recursively.assert_called_once_with(
-                rule['conditions'], variables)
+            rule['conditions'], variables)
         self.assertEqual(engine.do_actions.call_count, 0)
-
 
     @patch.object(engine, 'check_condition', return_value=True)
     def test_check_all_conditions_with_all_true(self, *args):
@@ -89,7 +86,6 @@ class EngineTests(TestCase):
         # assert call count and most recent call are as expected
         self.assertEqual(engine.check_condition.call_count, 2)
         engine.check_condition.assert_called_with({'thing2': ''}, variables)
-
 
     ###
     ### Check conditions
@@ -103,11 +99,9 @@ class EngineTests(TestCase):
         self.assertEqual(result, False)
         engine.check_condition.assert_called_once_with({'thing1': ''}, variables)
 
-
     def test_check_all_condition_with_no_items_fails(self):
         with self.assertRaises(AssertionError):
             engine.check_conditions_recursively({'all': []}, BaseVariables())
-
 
     @patch.object(engine, 'check_condition', return_value=True)
     def test_check_any_conditions_with_all_true(self, *args):
@@ -117,7 +111,6 @@ class EngineTests(TestCase):
         result = engine.check_conditions_recursively(conditions, variables)
         self.assertEqual(result, True)
         engine.check_condition.assert_called_once_with({'thing1': ''}, variables)
-
 
     @patch.object(engine, 'check_condition', return_value=False)
     def test_check_any_conditions_with_all_false(self, *args):
@@ -130,11 +123,9 @@ class EngineTests(TestCase):
         self.assertEqual(engine.check_condition.call_count, 2)
         engine.check_condition.assert_called_with({'thing2': ''}, variables)
 
-
     def test_check_any_condition_with_no_items_fails(self):
         with self.assertRaises(AssertionError):
             engine.check_conditions_recursively({'any': []}, BaseVariables())
-
 
     def test_check_all_and_any_together(self):
         conditions = {'any': [], 'all': []}
@@ -150,7 +141,8 @@ class EngineTests(TestCase):
         bv = BaseVariables()
 
         def side_effect(condition, _):
-            return condition['name'] in [2,3]
+            return condition['name'] in [2, 3]
+
         engine.check_condition.side_effect = side_effect
 
         engine.check_conditions_recursively(conditions, bv)
@@ -159,7 +151,6 @@ class EngineTests(TestCase):
         engine.check_condition.assert_any_call({'name': 2}, bv)
         engine.check_condition.assert_any_call({'name': 3}, bv)
 
-
     ###
     ### Operator comparisons
     ###
@@ -167,18 +158,17 @@ class EngineTests(TestCase):
         string_type = StringType('yo yo')
         with patch.object(string_type, 'contains', return_value=True):
             result = engine._do_operator_comparison(
-                    string_type, 'contains', 'its mocked')
+                string_type, 'contains', 'its mocked')
             self.assertTrue(result)
             string_type.contains.assert_called_once_with('its mocked')
-
 
     ###
     ### Actions
     ###
     def test_do_actions(self):
-        actions = [ {'name': 'action1'},
-                    {'name': 'action2',
-                     'params': {'param1': 'foo', 'param2': 10}}]
+        actions = [{'name': 'action1'},
+                   {'name': 'action2',
+                    'params': {'param1': 'foo', 'param2': 10}}]
         defined_actions = BaseActions()
         defined_actions.action1 = MagicMock()
         defined_actions.action2 = MagicMock()
@@ -191,5 +181,5 @@ class EngineTests(TestCase):
     def test_do_with_invalid_action(self):
         actions = [{'name': 'fakeone'}]
         err_string = "Action fakeone is not defined in class BaseActions"
-        with self.assertRaisesRegexp(AssertionError, err_string):
+        with self.assertRaisesRegex(AssertionError, err_string):
             engine.do_actions(actions, BaseActions())

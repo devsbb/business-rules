@@ -2,6 +2,7 @@ from business_rules.operators import BaseType, type_operator
 from . import TestCase
 from mock import MagicMock
 
+
 class OperatorsClassTests(TestCase):
     """ Test methods on classes that inherit from BaseType.
     """
@@ -13,6 +14,7 @@ class OperatorsClassTests(TestCase):
         """ Returns a dictionary listing all the operators on the class
         that can be called on that type, with some data about them.
         """
+
         class SomeType(BaseType):
 
             @type_operator(input_type='text')
@@ -29,11 +31,11 @@ class OperatorsClassTests(TestCase):
         self.assertEqual(some_operator['label'], 'Some Operator')
         self.assertEqual(some_operator['input_type'], 'text')
 
-
     def test_operator_decorator_casts_argument(self):
         """ Any operator that has the @type_operator decorator
         should call _assert_valid_value_and_cast on the parameter.
         """
+
         class SomeType(BaseType):
             def __init__(self, value):
                 self.value = value
