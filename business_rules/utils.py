@@ -1,7 +1,6 @@
 import inspect
 
 from decimal import Context, Decimal, Inexact
-from typing import Union
 
 
 class ActionResult:
@@ -24,22 +23,6 @@ class ActionResult:
             'action_params': self.action_params,
             'action_status': self.action_status,
             'action_result': self.action_result,
-        }
-
-
-class RuleResult:
-    STATUS_TRUE = 'true'
-    STATUS_FALSE = 'false'
-    STATUS_ERROR = 'error'
-
-    def __init__(self, status: str, action: Union[ActionResult, None]):
-        self.rule_status = status
-        self.rule_action = action
-
-    def to_dict(self):
-        return {
-            'rule_status': self.rule_status,
-            'rule_action': self.rule_action.to_dict() if self.rule_action else None,
         }
 
 

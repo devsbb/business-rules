@@ -1,7 +1,8 @@
 import logging
 
 from .fields import FIELD_NO_INPUT
-from .utils import ActionResult, RuleResult
+from .utils import ActionResult
+from typing import Union
 
 
 logger = logging.getLogger(__name__)
@@ -11,14 +12,15 @@ class InvalidRuleDefinition(Exception):
     """Invalid rule"""
 
 
-def run(rule, defined_variables, defined_actions) -> RuleResult:
+def run(rule, defined_variables, defined_actions) -> Union[ActionResult, None]:
     """
     Check rules and run actions
     :param rule: rule conditions
-    :param rule_name: name of rule
     :param defined_variables: defined variable
     :param defined_actions: defined actions
     :return:
+    ActionResult - if rule was triggered
+    None - if rule was not triggered
     """
 
     if isinstance(rule, (list, tuple)):
@@ -36,16 +38,7 @@ def run(rule, defined_variables, defined_actions) -> RuleResult:
         logger.debug(f'business-rules conditions: {conditions}')
         logger.debug(f'business-rules actions: {actions}')
 
-        action_result = do_action(action, defined_actions)
-        return RuleResult(
-            status=RuleResult.STATUS_ERROR if action_result.is_failed else RuleResult.STATUS_TRUE,
-            action=action_result,
-        )
-    else:
-        return RuleResult(
-            status=RuleResult.STATUS_FALSE,
-            action=None,
-        )
+        return do_action(action, defined_actions)
 
 
 def check_conditions_recursively(conditions, defined_variables):
