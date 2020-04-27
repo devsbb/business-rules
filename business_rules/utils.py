@@ -9,21 +9,21 @@ class ActionResult:
     STATUS_ERROR = 'error'
 
     def __init__(self, name: str, params: dict, status, result):
-        self.name = name
-        self.params = params
-        self.status = status
-        self.result = result
+        self.action_name = name
+        self.action_params = params
+        self.action_status = status
+        self.action_result = result
 
     @property
     def is_failed(self):
-        return self.status == self.STATUS_ERROR
+        return self.action_status == self.STATUS_ERROR
 
     def to_dict(self):
         return {
-            'name': self.name,
-            'params': self.params,
-            'status': self.status,
-            'result': self.result,
+            'action_name': self.action_name,
+            'action_params': self.action_params,
+            'action_status': self.action_status,
+            'action_result': self.action_result,
         }
 
 
@@ -33,15 +33,15 @@ class RuleResult:
     STATUS_ERROR = 'error'
 
     def __init__(self, name: str, status: str, action: Union[ActionResult, None]):
-        self.name = name
-        self.status = status
-        self.action = action
+        self.rule_name = name
+        self.rule_status = status
+        self.rule_action = action
 
     def to_dict(self):
         return {
-            'name': self.name,
-            'status': self.status,
-            'action': self.action.to_dict() if self.action else None,
+            'rule_name': self.rule_name,
+            'rule_status': self.rule_status,
+            'rule_action': self.rule_action.to_dict() if self.rule_action else None,
         }
 
 
