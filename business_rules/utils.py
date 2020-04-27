@@ -32,14 +32,12 @@ class RuleResult:
     STATUS_FALSE = 'false'
     STATUS_ERROR = 'error'
 
-    def __init__(self, name: str, status: str, action: Union[ActionResult, None]):
-        self.rule_name = name
+    def __init__(self, status: str, action: Union[ActionResult, None]):
         self.rule_status = status
         self.rule_action = action
 
     def to_dict(self):
         return {
-            'rule_name': self.rule_name,
             'rule_status': self.rule_status,
             'rule_action': self.rule_action.to_dict() if self.rule_action else None,
         }

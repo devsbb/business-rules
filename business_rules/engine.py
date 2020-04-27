@@ -11,7 +11,7 @@ class InvalidRuleDefinition(Exception):
     """Invalid rule"""
 
 
-def run(rule, rule_name, defined_variables, defined_actions) -> RuleResult:
+def run(rule, defined_variables, defined_actions) -> RuleResult:
     """
     Check rules and run actions
     :param rule: rule conditions
@@ -38,13 +38,11 @@ def run(rule, rule_name, defined_variables, defined_actions) -> RuleResult:
 
         action_result = do_action(action, defined_actions)
         return RuleResult(
-            name=rule_name,
             status=RuleResult.STATUS_ERROR if action_result.is_failed else RuleResult.STATUS_TRUE,
             action=action_result,
         )
     else:
         return RuleResult(
-            name=rule_name,
             status=RuleResult.STATUS_FALSE,
             action=None,
         )
