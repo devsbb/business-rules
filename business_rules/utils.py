@@ -1,6 +1,49 @@
 import inspect
 
 from decimal import Context, Decimal, Inexact
+from typing import Union
+
+
+class ActionResult:
+    STATUS_SUCCESS = 'success'
+    STATUS_ERROR = 'error'
+
+    def __init__(self, name: str, params: dict, status, result):
+        self.name = name
+        self.params = params
+        self.status = status
+        self.result = result
+
+    @property
+    def is_failed(self):
+        return self.status == self.STATUS_ERROR
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'params': self.params,
+            'status': self.status,
+            'result': self.result,
+        }
+
+
+class RuleResult:
+    STATUS_TRUE = 'true'
+    STATUS_FALSE = 'false'
+    STATUS_ERROR = 'error'
+
+    def __init__(self, name: str, status: str, action: Union[ActionResult, None]):
+        self.name = name
+        self.status = status
+        self.action = action
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'status': self.status,
+            'action': self.action.to_dict() if self.action else None,
+        }
+
 
 
 def fn_name_to_pretty_label(name) -> str:

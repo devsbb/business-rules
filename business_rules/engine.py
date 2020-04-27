@@ -1,6 +1,7 @@
 import logging
 
 from .fields import FIELD_NO_INPUT
+from .utils import ActionResult, RuleResult
 
 
 logger = logging.getLogger(__name__)
@@ -10,70 +11,43 @@ class InvalidRuleDefinition(Exception):
     """Invalid rule"""
 
 
-def get_value(rule_list, defined_variables, defined_actions) -> dict:
+def run(rule, rule_name, defined_variables, defined_actions) -> RuleResult:
     """
-    Run Rules till first will be triggered and returns its actions results.
-    Exception will be raised if more than one action was executed by the
-    triggered rule.
-    :returns: value returned by executed action
+    Check rules and run actions
+    :param rule: rule conditions
+    :param rule_name: name of rule
+    :param defined_variables: defined variable
+    :param defined_actions: defined actions
+    :return:
     """
-    rule_results = run_all(rule_list, defined_variables, defined_actions,
-                           stop_on_first_trigger=True)
-    if len(rule_results) == 0:
-        raise InvalidRuleDefinition(
-            'No rule executed or no action found in matching rule'
-        )
-    actions_result = rule_results[0]
-    if len(actions_result) != 1:
-        raise InvalidRuleDefinition(
-            f'Expected only one action to be executed. '
-            f'Executed {actions_result} actions')
 
-    return actions_result[_get_first_key_in_dictionary(actions_result)]
+    if isinstance(rule, (list, tuple)):
+        rule = rule[0]
 
-
-def _get_first_key_in_dictionary(dictionary):
-    """Get first key of the dict"""
-    return list(dictionary)[0]
-
-
-def run_all(rule_list,
-            defined_variables,
-            defined_actions,
-            stop_on_first_trigger=False) -> list:
-    """ Run all Rules and return the rules actions results
-    :returns:
-        rule_results(list): list of dictionaries. Each dictionary is a rule
-        actions' results
-    """
-    logger.debug("business-rules starting")
-    rule_results = []
-    for rule in rule_list:
-        actions_results = run(rule, defined_variables, defined_actions)
-        if actions_results:
-            rule_results.append(actions_results)
-            if stop_on_first_trigger:
-                logger.debug("business-rules finished")
-                return rule_results
-    logger.debug("business-rules finished")
-    return rule_results
-
-
-def run(rule, defined_variables, defined_actions) -> dict:
-    """ Run the rule and get the action returned result
-    Attributes:
-        rule(dict): the rule dictionary
-        defined_variables(BaseVariables): the defined set of variables object
-        defined_actions(BaseActions): the actions object
-    """
     conditions, actions = rule['conditions'], rule['actions']
-    rule_triggered = check_conditions_recursively(conditions, defined_variables)
+    if len(actions) !=1:
+        raise InvalidRuleDefinition(f'You should specify only one action, '
+                                    f'but specified: {len(actions)}')
+    action = actions[0]
+
+    rule_triggered = check_conditions_recursively(conditions,
+                                                  defined_variables)
     if rule_triggered:
         logger.debug(f'business-rules conditions: {conditions}')
         logger.debug(f'business-rules actions: {actions}')
 
-        return do_actions(actions, defined_actions)
-    return {}
+        action_result = do_action(action, defined_actions)
+        return RuleResult(
+            name=rule_name,
+            status=RuleResult.STATUS_ERROR if action_result.is_failed else RuleResult.STATUS_TRUE,
+            action=action_result,
+        )
+    else:
+        return RuleResult(
+            name=rule_name,
+            status=RuleResult.STATUS_FALSE,
+            action=None,
+        )
 
 
 def check_conditions_recursively(conditions, defined_variables):
@@ -152,31 +126,36 @@ def _do_operator_comparison(operator_type, operator_name, comparison_value):
     return method(comparison_value)
 
 
-def do_actions(actions, defined_actions) -> dict:
-    """ Run the actions
-    Attributes:
-        actions(list): list of dictionaries of actions. e.g: [
-            { "name": "put_on_sale",
-            "params": {"sale_percentage": 0.25},
-            }
-        ]
-    Returns:
-        actions_results(dict): Dictionary of actions results
-            e.g: {"put_on_sale: [product1, product2, ...]}
+def do_action(action, defined_actions) -> ActionResult:
     """
-    actions_results = {}
-    for action in actions:
-        method_name = action['name']
+    Run action
+    """
+    method_name = action['name']
 
-        params = action.get('params') or {}
-        if hasattr(defined_actions, method_name):
-            method = getattr(defined_actions, method_name)
-        else:
-            raise AssertionError(
-                'Action {} is not defined in class {}'.format(
-                    method_name, defined_actions.__class__.__name__
-                )
+    params = action.get('params') or {}
+    if hasattr(defined_actions, method_name):
+        method = getattr(defined_actions, method_name)
+    else:
+        raise AssertionError(
+            'Action {} is not defined in class {}'.format(
+                method_name, defined_actions.__class__.__name__
             )
-        actions_results[method_name] = method(**params)
-
-    return actions_results
+        )
+    try:
+        result = method(**params)
+    except Exception:
+        logger.exception(f'Error happened during executing action: '
+                         f'{method_name} with params: {params}')
+        return ActionResult(
+            name=method_name,
+            params=params,
+            status=ActionResult.STATUS_ERROR,
+            result=None,
+        )
+    else:
+        return ActionResult(
+            name=method_name,
+            params=params,
+            status=ActionResult.STATUS_SUCCESS,
+            result=result,
+        )
