@@ -32,8 +32,13 @@ def run(rule, defined_variables, defined_actions) -> Union[ActionResult, None]:
                                     f'but specified: {len(actions)}')
     action = actions[0]
 
-    rule_triggered = check_conditions_recursively(conditions,
-                                                  defined_variables)
+    try:
+        rule_triggered = check_conditions_recursively(conditions,
+                                                      defined_variables)
+    except Exception:
+        logger.exception('Exception happened during checking condition')
+        return
+
     if rule_triggered:
         logger.debug(f'business-rules conditions: {conditions}')
         logger.debug(f'business-rules actions: {actions}')
