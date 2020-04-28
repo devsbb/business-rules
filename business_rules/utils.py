@@ -3,6 +3,30 @@ import inspect
 from decimal import Context, Decimal, Inexact
 
 
+class ActionResult:
+    STATUS_SUCCESS = 'success'
+    STATUS_ERROR = 'error'
+
+    def __init__(self, name: str, params: dict, status, result):
+        self.action_name = name
+        self.action_params = params
+        self.action_status = status
+        self.action_result = result
+
+    @property
+    def is_failed(self):
+        return self.action_status == self.STATUS_ERROR
+
+    def to_dict(self):
+        return {
+            'action_name': self.action_name,
+            'action_params': self.action_params,
+            'action_status': self.action_status,
+            'action_result': self.action_result,
+        }
+
+
+
 def fn_name_to_pretty_label(name) -> str:
     """ Func name to label """
     return ' '.join([w.title() for w in name.split('_')])
