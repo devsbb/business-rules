@@ -1,7 +1,6 @@
 import logging
 
 from .fields import FIELD_NO_INPUT
-from .utils import ActionResult
 from typing import Union
 
 
@@ -12,15 +11,18 @@ class InvalidRuleDefinition(Exception):
     """Invalid rule"""
 
 
-def run(rule, defined_variables, defined_actions) -> Union[ActionResult, None]:
+def run(rule, defined_variables, defined_actions) -> Union[dict, None]:
     """
     Check rules and run actions
     :param rule: rule conditions
     :param defined_variables: defined variable
     :param defined_actions: defined actions
     :return:
-    ActionResult - if rule was triggered
-    None - if rule was not triggered
+    {
+        'action_name': action_name,
+        'action_params': action_params,
+        'action_result': action_result
+    }
     """
 
     if isinstance(rule, (list, tuple)):
@@ -32,13 +34,8 @@ def run(rule, defined_variables, defined_actions) -> Union[ActionResult, None]:
                                     f'but specified: {len(actions)}')
     action = actions[0]
 
-    try:
-        rule_triggered = check_conditions_recursively(conditions,
-                                                      defined_variables)
-    except Exception:
-        logger.exception('Exception happened during checking condition')
-        return
-
+    rule_triggered = check_conditions_recursively(conditions,
+                                                  defined_variables)
     if rule_triggered:
         logger.debug(f'business-rules conditions: {conditions}')
         logger.debug(f'business-rules actions: {actions}')
@@ -122,9 +119,15 @@ def _do_operator_comparison(operator_type, operator_name, comparison_value):
     return method(comparison_value)
 
 
-def do_action(action, defined_actions) -> ActionResult:
+def do_action(action, defined_actions) -> dict:
     """
     Run action
+    return:
+    {
+        'action_name': 'action_name',
+        'action_params': action_params,
+        'action_result': action_result
+    }
     """
     method_name = action['name']
 
@@ -137,21 +140,8 @@ def do_action(action, defined_actions) -> ActionResult:
                 method_name, defined_actions.__class__.__name__
             )
         )
-    try:
-        result = method(**params)
-    except Exception:
-        logger.exception(f'Error happened during executing action: '
-                         f'{method_name} with params: {params}')
-        return ActionResult(
-            name=method_name,
-            params=params,
-            status=ActionResult.STATUS_ERROR,
-            result=None,
-        )
-    else:
-        return ActionResult(
-            name=method_name,
-            params=params,
-            status=ActionResult.STATUS_SUCCESS,
-            result=result,
-        )
+    return {
+        'action_name': method_name,
+        'action_params': params,
+        'action_result': method(**params)
+    }
