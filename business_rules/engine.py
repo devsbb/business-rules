@@ -1,8 +1,8 @@
+import asyncio
 import logging
-
-from .fields import FIELD_NO_INPUT
 from typing import Union
 
+from .fields import FIELD_NO_INPUT
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class InvalidRuleDefinition(Exception):
     """Invalid rule"""
 
 
-def run(rule, defined_variables, defined_actions) -> Union[dict, None]:
+async def run(rule, defined_variables, defined_actions) -> Union[dict, None]:
     """
     Check rules and run actions
     :param rule: rule conditions
@@ -34,39 +34,41 @@ def run(rule, defined_variables, defined_actions) -> Union[dict, None]:
                                     f'but specified: {len(actions)}')
     action = actions[0]
 
-    rule_triggered = check_conditions_recursively(conditions,
-                                                  defined_variables)
+    rule_triggered = await check_conditions_recursively(
+        conditions,
+        defined_variables,
+    )
     if rule_triggered:
         logger.debug(f'business-rules conditions: {conditions}')
         logger.debug(f'business-rules actions: {actions}')
 
-        return do_action(action, defined_actions)
+        return await do_action(action, defined_actions)
 
 
-def check_conditions_recursively(conditions, defined_variables):
+async def check_conditions_recursively(conditions, defined_variables):
     """ Check conditions """
     keys = list(conditions.keys())
     if keys == ['all']:
         assert len(conditions['all']) >= 1
         for condition in conditions['all']:
-            if not check_conditions_recursively(condition, defined_variables):
+            if not await check_conditions_recursively(condition, defined_variables):
                 return False
         return True
 
     if keys == ['any']:
         assert len(conditions['any']) >= 1
         for condition in conditions['any']:
-            if check_conditions_recursively(condition, defined_variables):
+            if await check_conditions_recursively(condition, defined_variables):
                 return True
         return False
 
     # help prevent errors - any and all can only be in the condition dict
     # if they're the only item
     assert not ('any' in keys or 'all' in keys)
-    return check_condition(conditions, defined_variables)
+    return await check_condition(conditions, defined_variables)
 
 
-def check_condition(condition, defined_variables):
+async def check_condition(condition, defined_variables):
     """
     Checks a single rule condition - the condition will be made up of
     variables, values, and the comparison operator. The defined_variables
@@ -75,15 +77,15 @@ def check_condition(condition, defined_variables):
     name = condition['name']
     op = condition['operator']
     value = condition['value']
-    operator_type = _get_variable_value(defined_variables, name)
+    operator_type = await _get_variable_value(defined_variables, name)
     if 'value_is_variable' in condition and condition['value_is_variable']:
         variable_name = value
-        temp_value = _get_variable_value(defined_variables, variable_name)
+        temp_value = await _get_variable_value(defined_variables, variable_name)
         value = temp_value.value
     return _do_operator_comparison(operator_type, op, value)
 
 
-def _get_variable_value(defined_variables, name):
+async def _get_variable_value(defined_variables, name):
     """ Call the function provided on the defined_variables object with the
     given name (raise exception if that doesn't exist) and casts it to the
     specified type.
@@ -97,6 +99,10 @@ def _get_variable_value(defined_variables, name):
 
     method = getattr(defined_variables, name, fallback)
     val = method()
+
+    if asyncio.iscoroutine(val):
+        val = await val
+
     return method.field_type(val)
 
 
@@ -119,7 +125,7 @@ def _do_operator_comparison(operator_type, operator_name, comparison_value):
     return method(comparison_value)
 
 
-def do_action(action, defined_actions) -> dict:
+async def do_action(action, defined_actions) -> dict:
     """
     Run action
     return:
@@ -140,8 +146,12 @@ def do_action(action, defined_actions) -> dict:
                 method_name, defined_actions.__class__.__name__
             )
         )
+    action_result = method(**params)
+    if asyncio.iscoroutine(action_result):
+        action_result = await action_result
+
     return {
         'action_name': method_name,
         'action_params': params,
-        'action_result': method(**params)
+        'action_result': action_result
     }
