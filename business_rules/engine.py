@@ -2,7 +2,9 @@ import asyncio
 import logging
 from typing import Union
 
+from .actions import BaseActions
 from .fields import FIELD_NO_INPUT
+from .variables import BaseVariables
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +13,11 @@ class InvalidRuleDefinition(Exception):
     """Invalid rule"""
 
 
-async def run(rule, defined_variables, defined_actions) -> Union[dict, None]:
+async def run(
+    rule: dict,
+    defined_variables: BaseVariables,
+    defined_actions: BaseActions,
+) -> Union[dict, None]:
     """
     Check rules and run actions
     :param rule: rule conditions
@@ -24,9 +30,6 @@ async def run(rule, defined_variables, defined_actions) -> Union[dict, None]:
         'action_result': action_result
     }
     """
-
-    if isinstance(rule, (list, tuple)):
-        rule = rule[0]
 
     conditions, actions = rule['conditions'], rule['actions']
     if len(actions) !=1:
