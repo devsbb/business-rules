@@ -2,8 +2,7 @@ import datetime
 import json
 
 from business_rules import (
-    run_all,
-    get_value,
+    run,
     export_rule_data,
 )
 from business_rules.actions import (
@@ -12,7 +11,6 @@ from business_rules.actions import (
 )
 from business_rules.variables import (
     numeric_rule_variable,
-    select_rule_variable,
     string_rule_variable,
     rule_variable,
     BaseVariables,
@@ -117,7 +115,7 @@ def test_1():
     # actions = ProductActions(product)
     # vars = ProductVariables(product)
 
-    run_all_result = run_all(
+    run_all_result = run(
         rule_list=rules,
         defined_variables=ProductVariables(product),
         defined_actions=ProductActions(product),
