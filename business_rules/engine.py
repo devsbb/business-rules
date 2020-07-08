@@ -32,6 +32,9 @@ async def run(
     """
 
     conditions, actions = rule['conditions'], rule['actions']
+    if actions is None:
+        raise InvalidRuleDefinition('Actions are None')
+
     if len(actions) !=1:
         raise InvalidRuleDefinition(f'You should specify only one action, '
                                     f'but specified: {len(actions)}')
