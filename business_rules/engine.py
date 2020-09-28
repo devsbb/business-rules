@@ -5,6 +5,7 @@ from typing import Union
 from .actions import BaseActions
 from .fields import FIELD_NO_INPUT
 from .variables import BaseVariables
+from .exceptions import MissingVariableException
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,13 @@ async def check_condition(condition, defined_variables):
     name = condition['name']
     op = condition['operator']
     value = condition['value']
-    operator_type = await _get_variable_value(defined_variables, name)
+
+    try:
+        operator_type = await _get_variable_value(defined_variables, name)
+    except MissingVariableException:
+        """If variable value is missing, than corresponding condition is false"""
+        return False
+
     if 'value_is_variable' in condition and condition['value_is_variable']:
         variable_name = value
         temp_value = await _get_variable_value(defined_variables, variable_name)
