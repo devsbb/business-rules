@@ -6,6 +6,7 @@ from functools import wraps
 
 from .fields import (
     FIELD_NO_INPUT,
+    FIELD_MULTIPLE,
     FIELD_NUMERIC,
     FIELD_SELECT,
     FIELD_SELECT_MULTIPLE,
@@ -283,6 +284,64 @@ class SelectMultipleType(BaseType):
         return found_one
 
     @type_operator(FIELD_SELECT_MULTIPLE)
+    def shares_no_elements_with(self, other_value):
+        """No shares"""
+        return not self.shares_at_least_one_element_with(other_value)
+
+
+@export_type
+class MultipleType(BaseType):
+    """Select multiple type"""
+    name = 'multiple'
+
+    def _assert_valid_value_and_cast(self, value):
+        """Check value and cast"""
+        if not hasattr(value, '__iter__'):
+            raise AssertionError(f"{value} is not a valid iterable type")
+        return value
+
+    @staticmethod
+    def _to_frozenset(other_value) -> frozenset:
+        """Split string by separators to set"""
+        if isinstance(other_value, (set, list, tuple)):
+            return frozenset(other_value)
+
+        if isinstance(other_value, str):
+            max_count = 1
+            best_sep = ','
+            for sep in (',', ';'):
+                count = other_value.count(sep)
+                if max_count < count:
+                    max_count = count
+                    best_sep = sep
+            return frozenset(other_value.split(best_sep))
+
+        raise AssertionError(f'{other_value} unexpected type')
+
+    @type_operator(FIELD_MULTIPLE)
+    def contains_all(self, other_value):
+        """Contains all"""
+        value = self._to_frozenset(self.value)
+        other_value: frozenset = self._to_frozenset(other_value)
+        return len(value & other_value) == len(value)
+
+    @type_operator(FIELD_MULTIPLE)
+    def shares_at_least_one_element_with(self, other_value):
+        """Shares at least one element"""
+        value = self._to_frozenset(self.value)
+        other_value: frozenset = self._to_frozenset(other_value)
+        if value & other_value:
+            return True
+        return False
+
+    @type_operator(FIELD_MULTIPLE)
+    def shares_exactly_one_element_with(self, other_value):
+        """Shares only one"""
+        value = self._to_frozenset(self.value)
+        other_value: frozenset = self._to_frozenset(other_value)
+        return len(value & other_value) == 1
+
+    @type_operator(FIELD_MULTIPLE)
     def shares_no_elements_with(self, other_value):
         """No shares"""
         return not self.shares_at_least_one_element_with(other_value)

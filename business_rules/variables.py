@@ -1,11 +1,14 @@
 import inspect
 from .utils import fn_name_to_pretty_label
-from .operators import (BaseType,
-                        NumericType,
-                        StringType,
-                        BooleanType,
-                        SelectType,
-                        SelectMultipleType)
+from .operators import (
+    BaseType,
+    MultipleType,
+    NumericType,
+    StringType,
+    BooleanType,
+    SelectType,
+    SelectMultipleType
+)
 
 
 class BaseVariables:
@@ -82,6 +85,15 @@ def select_rule_variable(label=None, options=None, rule_type=None):
 def select_multiple_rule_variable(label=None, options=None, rule_type=None):
     return rule_variable(
         SelectMultipleType,
+        label=label,
+        options=options,
+        rule_type=rule_type
+    )
+
+
+def multiple_rule_variable(label=None, options=None, rule_type=None):
+    return rule_variable(
+        MultipleType,
         label=label,
         options=options,
         rule_type=rule_type
